@@ -33,18 +33,20 @@ gh repo create neohub --private --source=. --remote=origin --push
 1. Зайди на https://dashboard.render.com
 2. **New** → **Blueprint** → подключи GitHub-репозиторий
 3. Выбери `render.yaml`
-4. После создания сервиса открой Web Service → **Environment** и задай:
+4. На аккаунте уже может быть один free Postgres — Blueprint **не** создаёт вторую БД.
+   Подключи существующую: Postgres → **Connect** → **Internal Database URL** → в Web Service → **Environment** → `DATABASE_URL`.
+5. Также задай:
 
 | Key | Value |
 |-----|--------|
 | `DJANGO_ALLOWED_HOSTS` | `ghub-xxxx.onrender.com` (твой URL без https) |
 | `CSRF_TRUSTED_ORIGINS` | `https://ghub-xxxx.onrender.com` |
 
-`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DATABASE_URL` подставляются из Blueprint.
+`DJANGO_SECRET_KEY` / `DJANGO_DEBUG` подставляются из Blueprint.
 
-5. Дождись успешного Deploy (Build + migrate).
+6. Дождись успешного Deploy (Build + migrate).
 
-> Если free Postgres недоступен в регионе — создай Postgres вручную (Starter) или бесплатный Neon (https://neon.tech) и вставь `DATABASE_URL` в env.
+> Если free Postgres недоступен — Starter на Render или Neon (https://neon.tech) и вставь `DATABASE_URL`.
 
 ## 3. Первый вход (Render Shell)
 
