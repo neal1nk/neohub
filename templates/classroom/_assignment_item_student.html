@@ -1,0 +1,71 @@
+<li class="item-card matrix-card type-{{ assignment.assignment_type }} {% if assignment.is_closed %}is-closed{% endif %} {% if assignment.compute_status == 'open' or assignment.compute_status == 'overdue' %}is-pending{% endif %} {% if assignment.show_overdue_badge %}is-overdue{% endif %}">
+  <div class="card-top">
+    <span class="type-badge type-badge-{{ assignment.assignment_type }} {% if assignment.is_credit %}{{ assignment.credit_badge_modifier }}{% endif %}">{{ assignment.type_badge_label }}</span>
+    <div class="card-badges">
+      <span class="status {% if assignment.is_closed and assignment.compute_status != 'graded' %}status-closed{% else %}status-{{ assignment.compute_status }}{% endif %}">{{ assignment.status_label }}</span>
+      {% if assignment.show_overdue_badge and assignment.compute_status != 'overdue' and not assignment.is_closed %}
+        <span class="status status-overdue">Просрочено</span>
+      {% endif %}
+    </div>
+  </div>
+  <h3 class="card-title">{{ assignment.title }}</h3>
+  <p class="card-meta muted tiny">
+    {% if assignment.is_submitted and assignment.submission.submitted_at %}
+      сдано {{ assignment.submission.submitted_at|date:"d.m.Y H:i" }}
+      {% if assignment.deadline %} · дедлайн {{ assignment.deadline|date:"d.m.Y H:i" }}{% endif %}
+    {% elif assignment.deadline %}
+      до {{ assignment.deadline|date:"d.m.Y H:i" }}
+      {% if assignment.should_show_deadline_countdown %}
+        · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+      {% endif %}
+    {% else %}без дедлайна{% endif %}
+    {% if not assignment.is_for_grade %} · формальная оценка{% endif %}
+  </p>
+  {% if assignment.is_for_grade %}
+  <div class="score-slider-block">
+    <div class="score-slider-head">
+      <span>Баллы</span>
+      <strong style="color: {{ assignment.score_color }}">
+        {% if assignment.submission %}{{ assignment.submission.display_grade }}{% else %}—{% endif %}
+      </strong>
+    </div>
+    <div class="score-track">
+      <div
+        class="score-fill"
+        style="width: {% if assignment.submission and assignment.submission.grade is not None %}{{ assignment.submission.grade }}{% else %}0{% endif %}%; background: {{ assignment.score_color }}"
+      ></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="score-slider-block formal-grade-block">
+    <div class="score-slider-head">
+      <span>Оценка</span>
+      <strong style="color: {{ assignment.score_color }}">
+        {% if assignment.submission and assignment.submission.formal_grade %}
+          {{ assignment.submission.get_formal_grade_display }}
+        {% else %}
+          —
+        {% endif %}
+      </strong>
+    </div>
+    <div class="score-track">
+      <div
+        class="score-fill"
+        style="width: {{ assignment.formal_grade_level }}%; background: {{ assignment.score_color }}"
+      ></div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="matrix-card-actions">
+    {% if assignment.is_closed %}
+      <span class="btn btn-ghost btn-block" aria-disabled="true">🔒 Закрыто</span>
+      {% if assignment.unlock_at %}
+        <p class="muted tiny">Откроется {{ assignment.unlock_at|date:"d.m.Y H:i" }}</p>
+      {% endif %}
+    {% else %}
+      <a class="btn btn-secondary btn-block" href="{% url 'classroom:assignment_submit' assignment.id %}">
+        {% if assignment.is_locked_for_student %}Открыть{% elif assignment.submission %}Открыть{% else %}Сдать{% endif %}
+      </a>
+    {% endif %}
+  </div>
+</li>

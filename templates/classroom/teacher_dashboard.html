@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Ученики — NeoHub{% endblock %}
+{% block nav_teacher_students %}is-active{% endblock %}
+{% block active_nav %}teacher-students{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Кабинет преподавателя</p>
+    <h1>Ученики</h1>
+    <p class="muted">Выберите ученика, чтобы работать с рейтингом, материалами и заданиями.</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-ghost" href="{% url 'classroom:assignment_bulk_create' %}">Коллективная выдача</a>
+    <a class="btn btn-primary" href="{% url 'classroom:student_create' %}">Добавить ученика</a>
+  </div>
+</section>
+
+<section class="storage-meter reveal delay {% if storage.is_critical %}is-critical{% elif storage.is_warning %}is-warning{% endif %}">
+  <div class="storage-meter-head">
+    <div>
+      <span class="storage-meter-label">Хранилище файлов</span>
+      <p class="muted tiny">Ваши файлы и файлы ваших учеников · лимит {{ storage.limit_label }} МБ</p>
+    </div>
+    <strong class="storage-meter-value">{{ storage.used_label }} / {{ storage.limit_label }} МБ</strong>
+  </div>
+  <div class="storage-meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ storage.percent|floatformat:0 }}">
+    <div class="storage-meter-fill" style="width: {{ storage.percent }}%"></div>
+  </div>
+</section>
+
+<section class="stats stats-two reveal delay">
+  <div class="stat">
+    <span class="stat-value">{{ student_count }}</span>
+    <span class="stat-label">Учеников</span>
+  </div>
+  <button type="button" class="stat stat-clickable" @click="openPending()">
+    <span class="stat-value">{{ pending_grades }}</span>
+    <span class="stat-label">Ждут оценки →</span>
+  </button>
+</section>
+
+<div class="list-window list-window-fill reveal delay-2" x-data="listFilter()">
+  <div class="list-window-head">
+    <h2>Список учеников {% if students %}· {{ students|length }}{% endif %}</h2>
+  </div>
+  <div class="list-window-body list-window-body-fill">
+    {% if students %}
+      <label class="field field-search">
+        <input
+          type="search"
+          class="input"
+          placeholder="Поиск по имени или логину…"
+          x-model="query"
+          autocomplete="off"
+        >
+      </label>
+      <ul class="student-list">
+        {% for student in students %}
+          <li data-filter-text="{{ student.profile.get_display_name }} {{ student.username }}">
+            <a class="student-row" href="{% url 'classroom:student_detail' student.id %}">
+              <span class="avatar">{{ student.profile.get_display_name|slice:":1"|upper }}</span>
+              <span class="student-meta">
+                <strong>{{ student.profile.get_display_name }}</strong>
+                <span class="muted">@{{ student.username }}</span>
+              </span>
+              {% with score=student.profile.rating_score %}
+                <span class="score-pill" style="--score-color: {{ student.profile.rating_color }}">
+                  {% if score is not None %}{{ score }}{% else %}—{% endif %}
+                </span>
+              {% endwith %}
+              <span class="chevron">→</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="muted tiny" x-show="query && !hasVisible()" x-cloak>Никого не найдено.</p>
+    {% else %}
+      <div class="empty-state">
+        <h2>Пока нет учеников</h2>
+        <p class="muted">Создайте первого ученика и выдайте ему логин с паролем.</p>
+        <a class="btn btn-primary" href="{% url 'classroom:student_create' %}">Создать ученика</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# Outside .reveal — transform on animated ancestors breaks position:fixed #}
+<div
+  class="sheet-overlay"
+  x-show="pendingOpen"
+  x-cloak
+  @keydown.escape.window="closePending()"
+  @click.self="closePending()"
+>
+  <div class="sheet-panel" @click.stop>
+    <div class="sheet-head">
+      <div>
+        <p class="eyebrow">Проверка</p>
+        <h2>Ждут оценки</h2>
+      </div>
+      <button type="button" class="btn btn-ghost" @click="closePending()">Закрыть</button>
+    </div>
+    <div class="sheet-body" x-data="listFilter()">
+    {% if pending_items %}
+      <label class="field field-search">
+        <input type="search" class="input" placeholder="Фильтр по заданию или ученику…" x-model="query" autocomplete="off">
+      </label>
+      <ul class="item-list">
+        {% for submission in pending_items %}
+          <li
+            class="item-card"
+            data-filter-text="{{ submission.assignment.title }} {{ submission.assignment.student.profile.get_display_name }} {{ submission.assignment.get_assignment_type_display }}"
+          >
+            <div class="item-head">
+              <div>
+                <strong>{{ submission.assignment.title }}</strong>
+                <span class="status status-submitted">сдано</span>
+              </div>
+              <a
+                class="btn btn-secondary"
+                href="{% url 'classroom:assignment_grade' submission.assignment_id %}"
+                @click="closePending()"
+              >Просмотр</a>
+            </div>
+            <p class="muted">
+              {{ submission.assignment.student.profile.get_display_name }}
+              · {{ submission.assignment.get_assignment_type_display }}
+              · {{ submission.submitted_at|date:"d.m.Y H:i" }}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">
+        <h2>Всё проверено</h2>
+        <p class="muted">Нет работ, ожидающих оценки.</p>
+      </div>
+    {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

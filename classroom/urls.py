@@ -1,0 +1,161 @@
+from django.urls import path
+
+from . import views
+
+app_name = "classroom"
+
+urlpatterns = [
+    path("teacher/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("teacher/students/new/", views.student_create, name="student_create"),
+    path(
+        "teacher/students/<int:student_id>/delete/",
+        views.student_delete,
+        name="student_delete",
+    ),
+    path("students/<int:student_id>/", views.student_detail, name="student_detail"),
+    path(
+        "students/<int:student_id>/materials/",
+        views.material_create,
+        name="material_create",
+    ),
+    path(
+        "materials/<int:material_id>/edit/",
+        views.material_edit,
+        name="material_edit",
+    ),
+    path(
+        "students/<int:student_id>/assignments/<str:assignment_type>/",
+        views.assignment_create,
+        name="assignment_create",
+    ),
+    path(
+        "assignments/<int:assignment_id>/edit/",
+        views.assignment_edit,
+        name="assignment_edit",
+    ),
+    path("materials/<int:material_id>/delete/", views.material_delete, name="material_delete"),
+    path(
+        "assignments/<int:assignment_id>/delete/",
+        views.assignment_delete,
+        name="assignment_delete",
+    ),
+    path(
+        "assignments/<int:assignment_id>/extend-deadline/",
+        views.assignment_extend_deadline,
+        name="assignment_extend_deadline",
+    ),
+    path(
+        "assignments/<int:assignment_id>/toggle-lock/",
+        views.assignment_toggle_lock,
+        name="assignment_toggle_lock",
+    ),
+    path(
+        "assignments/<int:assignment_id>/grade/",
+        views.assignment_grade,
+        name="assignment_grade",
+    ),
+    path("me/", views.student_dashboard, name="student_dashboard"),
+    path("me/materials/", views.student_materials, name="student_materials"),
+    path("me/assignments/", views.student_assignments, name="student_assignments"),
+    path(
+        "me/assignments/poll/",
+        views.student_assignments_poll,
+        name="student_assignments_poll",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/submit/",
+        views.assignment_submit,
+        name="assignment_submit",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/grade-feedback/",
+        views.grade_feedback,
+        name="grade_feedback",
+    ),
+    path(
+        "assignments/<int:assignment_id>/grade-clarify/",
+        views.grade_clarify,
+        name="grade_clarify",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/draft/autosave/",
+        views.assignment_draft_autosave,
+        name="assignment_draft_autosave",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/draft/upload/",
+        views.assignment_draft_upload,
+        name="assignment_draft_upload",
+    ),
+    path(
+        "assignments/<int:assignment_id>/credit-retake/",
+        views.assignment_credit_retake,
+        name="assignment_credit_retake",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/credit/start/",
+        views.credit_start,
+        name="credit_start",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/credit/autosave/",
+        views.credit_autosave,
+        name="credit_autosave",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/credit/upload/",
+        views.credit_upload,
+        name="credit_upload",
+    ),
+    path(
+        "me/assignments/<int:assignment_id>/credit/finish/",
+        views.credit_finish,
+        name="credit_finish",
+    ),
+    path("notifications/", views.notifications_list, name="notifications"),
+    path(
+        "notifications/poll/",
+        views.notifications_poll,
+        name="notifications_poll",
+    ),
+    path(
+        "notifications/<int:notification_id>/read/",
+        views.notification_mark_read,
+        name="notification_read",
+    ),
+    path(
+        "notifications/read-all/",
+        views.notifications_mark_all_read,
+        name="notifications_read_all",
+    ),
+    path(
+        "notifications/clear/",
+        views.notifications_clear,
+        name="notifications_clear",
+    ),
+    path(
+        "teacher/assignments/bulk/",
+        views.assignment_bulk_create,
+        name="assignment_bulk_create",
+    ),
+    path(
+        "files/material/<int:file_id>/",
+        views.download_material_file,
+        name="download_material_file",
+    ),
+    path(
+        "files/assignment/<int:file_id>/",
+        views.download_assignment_file,
+        name="download_assignment_file",
+    ),
+    path(
+        "files/submission/<int:file_id>/",
+        views.download_submission_file,
+        name="download_submission_file",
+    ),
+    path(
+        "files/submission/<int:file_id>/delete/",
+        views.submission_file_delete,
+        name="submission_file_delete",
+    ),
+]

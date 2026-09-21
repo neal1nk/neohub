@@ -1,0 +1,9 @@
+{% if ends_at %}
+<span
+  class="deadline-remaining"
+  x-data="deadlineCountdown('{{ ends_at|date:'c' }}')"
+  x-init="start()"
+  x-text="label"
+  :class="{ 'is-expired': expired }"
+></span>
+{% endif %}

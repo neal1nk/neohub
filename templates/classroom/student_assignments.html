@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Задания — NeoHub{% endblock %}
+{% block nav_student_tasks %}is-active{% endblock %}
+{% block active_nav %}student-tasks{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Ученик</p>
+    <h1>Мои задания</h1>
+  </div>
+</section>
+
+<div
+  class="list-window list-window-fill reveal delay"
+  x-data="assignmentsLive({
+    pollUrl: '{% url 'classroom:student_assignments_poll' %}',
+    typeFilter: '{{ type_filter|escapejs }}',
+    version: '{{ list_version|escapejs }}'
+  })"
+  x-init="start()"
+>
+  <div class="list-window-head">
+    <h2>
+      {% if type_filter == 'homework' %}Домашки
+      {% elif type_filter == 'practice' %}Практика
+      {% elif type_filter == 'credit' %}Зачёты
+      {% else %}Все задания{% endif %}
+      <span x-text="countLabel">· {{ assignments|length }}</span>
+    </h2>
+  </div>
+  <div class="list-window-body list-window-body-fill" id="assignments-live-body">
+    {% include "classroom/_assignments_live_body.html" %}
+  </div>
+</div>
+{% endblock %}

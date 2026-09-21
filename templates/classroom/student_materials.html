@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Теория — NeoHub{% endblock %}
+{% block nav_student_theory %}is-active{% endblock %}
+{% block active_nav %}student-theory{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Ученик</p>
+    <h1>Теоретические материалы</h1>
+  </div>
+</section>
+
+<div class="list-window list-window-fill reveal delay" x-data="listFilter()">
+  <div class="list-window-head">
+    <h2>Материалы {% if materials %}· {{ materials|length }}{% endif %}</h2>
+  </div>
+  <div class="list-window-body list-window-body-fill">
+    {% if materials %}
+      <label class="field field-search">
+        <input type="search" class="input" placeholder="Поиск по теории…" x-model="query" autocomplete="off">
+      </label>
+      <ul class="theory-grid">
+        {% for material in materials %}
+          <li
+            class="theory-tile"
+            data-filter-text="{{ material.title }}"
+            x-data="{ open: false }"
+          >
+            <button type="button" class="theory-tile-btn" @click="open = true">
+              <span class="type-badge type-badge-theory">Теория</span>
+              <strong class="theory-tile-title">{{ material.title }}</strong>
+              <span class="theory-tile-meta muted tiny">
+                {{ material.created_at|date:"d.m.Y" }}
+                {% if material.files.all %} · файлы {{ material.files.all|length }}{% endif %}
+                {% if material.link %} · ссылка{% endif %}
+              </span>
+            </button>
+
+            <template x-teleport="body">
+            <div
+              class="sheet-overlay"
+              x-show="open"
+              x-cloak
+              x-transition.opacity.duration.200ms
+              @keydown.escape.window="if (open) open = false"
+              @click.self="open = false"
+            >
+              <div class="sheet-panel theory-sheet" @click.stop>
+                <div class="sheet-head">
+                  <div>
+                    <p class="eyebrow">Теория</p>
+                    <h2>{{ material.title }}</h2>
+                  </div>
+                  <button type="button" class="btn btn-ghost" @click="open = false">Закрыть</button>
+                </div>
+                <div class="sheet-body">
+                  {% if material.body %}<p>{{ material.body|linebreaksbr }}</p>{% endif %}
+                  {% if material.link %}<p><a href="{{ material.link }}" target="_blank" rel="noopener">Открыть ссылку</a></p>{% endif %}
+                  {% if material.files.all %}
+                    <ul class="file-links">
+                      {% for f in material.files.all %}
+                        <li><a href="{% url 'classroom:download_material_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                  <span class="muted tiny">{{ material.created_at|date:"d.m.Y H:i" }}</span>
+                </div>
+              </div>
+            </div>
+            </template>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="muted tiny" x-show="query && !hasVisible()" x-cloak>Ничего не найдено.</p>
+    {% else %}
+      <div class="empty-state">
+        <h2>Пока пусто</h2>
+        <p class="muted">Преподаватель ещё не прикрепил материалы.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

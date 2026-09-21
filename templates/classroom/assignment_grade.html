@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Оценка — NeoHub{% endblock %}
+
+{% block content %}
+<div
+  class="soft-forms"
+  hx-boost="true"
+  hx-target="#page-content"
+  hx-select="#page-content"
+  hx-select-oob="#sidebar-extra"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">{{ assignment.get_assignment_type_display }}</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="muted">
+      Ученик: {{ assignment.student.profile.get_display_name }}
+      {% if submission and submission.submitted_at %}
+        · сдано {{ submission.submitted_at|date:"d.m.Y H:i" }}
+      {% endif %}
+      {% if assignment.deadline %}
+        · дедлайн {{ assignment.deadline|date:"d.m.Y H:i" }}
+        {% if assignment.should_show_deadline_countdown %}
+          · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+        {% endif %}
+      {% elif not submission or not submission.submitted_at %}
+        · без дедлайна
+      {% endif %}
+      {% if not assignment.is_for_grade %} · не на оценку (формально){% endif %}
+    </p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:student_detail' assignment.student_id %}?tab={{ assignment.assignment_type }}">Назад</a>
+</section>
+
+<section class="split-layout reveal delay">
+  <div class="list-panel">
+    <h2>Ответ ученика</h2>
+    {% if submission.is_submitted %}
+      {% if submission.text %}<p>{{ submission.text|linebreaksbr }}</p>{% endif %}
+      {% if submission.files.all %}
+        <ul class="file-links">
+          {% for f in submission.files.all %}
+            <li><a href="{% url 'classroom:download_submission_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <p class="muted tiny">Отправлено: {{ submission.submitted_at|date:"d.m.Y H:i" }}</p>
+    {% else %}
+      <p class="muted">Ответа ещё нет — можно выставить оценку заранее.</p>
+    {% endif %}
+    {% if submission.student_comment or submission.clarification_requested %}
+      <div class="submission-box mt">
+        {% if submission.clarification_requested %}
+          <p>
+            <strong>Запрос пояснения</strong>
+            <span class="status status-overdue">ждут ответа</span>
+          </p>
+        {% else %}
+          <p><strong>Вопрос ученика</strong></p>
+        {% endif %}
+        {% if submission.student_comment %}
+          <p>{{ submission.student_comment|linebreaksbr }}</p>
+        {% endif %}
+        {% if submission.clarification_requested %}
+          <div class="clarify-box" x-data="{ open: false }">
+            <button type="button" class="btn btn-primary btn-sm" x-show="!open" @click="open = true">Пояснить</button>
+            <form
+              method="post"
+              action="{% url 'classroom:grade_clarify' assignment.id %}"
+              x-show="open"
+              x-cloak
+            >
+              {% csrf_token %}
+              <label class="field">
+                <span>Пояснение</span>
+                <textarea class="input textarea" name="clarification" rows="3" required placeholder="Поясните оценку ученику…"></textarea>
+              </label>
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary">Отправить</button>
+                <button type="button" class="btn btn-ghost" @click="open = false">Отмена</button>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+    {% if assignment.files.all %}
+      <h2 class="mt">Файлы задания</h2>
+      <ul class="file-links">
+        {% for f in assignment.files.all %}
+          <li><a href="{% url 'classroom:download_assignment_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  {% if is_formal %}
+  <form method="post" class="form-panel">
+    {% csrf_token %}
+    <h2>Формальная оценка</h2>
+    <p class="muted tiny">Не влияет на рейтинг ученика.</p>
+    <label class="field">
+      <span>{{ form.formal_grade.label }}</span>
+      {{ form.formal_grade }}
+    </label>
+    <label class="field">
+      <span>{{ form.teacher_comment.label }}</span>
+      {{ form.teacher_comment }}
+    </label>
+    <button type="submit" class="btn btn-primary">{% if submission.is_graded %}Изменить оценку{% else %}Выставить оценку{% endif %}</button>
+  </form>
+  {% else %}
+  <form method="post" class="form-panel" x-data="{ score: {{ form.grade.value|default:0 }} }">
+    {% csrf_token %}
+    <h2>Оценка (0–100)</h2>
+    <label class="field">
+      <span>Числовое значение</span>
+      <input
+        type="number"
+        min="0"
+        max="100"
+        step="1"
+        class="input"
+        x-model.number="score"
+        @input="if (score < 0) score = 0; if (score > 100) score = 100"
+      >
+    </label>
+    <label class="field">
+      <span>Или ползунок: <strong x-text="score"></strong>/100</span>
+      <input
+        type="range"
+        name="grade"
+        min="0"
+        max="100"
+        step="1"
+        class="score-range"
+        x-model.number="score"
+      >
+      <div class="score-track mt-sm">
+        <div class="score-fill" :style="`width: ${score}%; background: rgb(${220 - score * 1.6}, ${60 + score * 1.6}, 70)`"></div>
+      </div>
+    </label>
+    <label class="field">
+      <span>{{ form.teacher_comment.label }}</span>
+      {{ form.teacher_comment }}
+    </label>
+    <button type="submit" class="btn btn-primary">{% if submission.is_graded %}Изменить оценку{% else %}Выставить оценку{% endif %}</button>
+  </form>
+  {% endif %}
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+<li
+  class="item-card teacher-assignment-row teacher-material-row"
+  data-filter-text="{{ material.title }}"
+  x-data="{ open: false }"
+>
+  <button type="button" class="teacher-assignment-summary" @click="open = true">
+    <div class="teacher-assignment-main">
+      <div class="card-top">
+        <span class="type-badge type-badge-theory">Теория</span>
+        <div class="card-badges">
+          {% if material.files.all %}<span class="status status-submitted">файлы · {{ material.files.all|length }}</span>{% endif %}
+          {% if material.link %}<span class="status status-ungraded">ссылка</span>{% endif %}
+        </div>
+      </div>
+      <h3 class="card-title">{{ material.title }}</h3>
+      <p class="card-meta muted tiny">{{ material.created_at|date:"d.m.Y H:i" }}</p>
+    </div>
+    <span class="chevron" aria-hidden="true">→</span>
+  </button>
+
+  <template x-teleport="body">
+  <div
+    class="sheet-overlay"
+    x-show="open"
+    x-cloak
+    @keydown.escape.window="if (open) open = false"
+    @click.self="open = false"
+  >
+    <div class="sheet-panel teacher-detail-sheet" @click.stop>
+      <div class="sheet-head">
+        <div>
+          <p class="eyebrow">Теория</p>
+          <h2>{{ material.title }}</h2>
+        </div>
+        <button type="button" class="btn btn-ghost" @click="open = false">Закрыть</button>
+      </div>
+      <div class="sheet-body">
+        <div class="item-head">
+          <span class="muted tiny">{{ material.created_at|date:"d.m.Y H:i" }}</span>
+          <div class="btn-row">
+            <a class="btn btn-secondary btn-sm" href="{% url 'classroom:material_edit' material.id %}">Изменить</a>
+            <form
+              method="post"
+              action="{% url 'classroom:material_delete' material.id %}"
+              data-confirm
+              data-confirm-title="Удалить материал"
+              data-confirm-message="Удалить «{{ material.title|escape }}»?"
+              data-confirm-action="Удалить"
+            >
+              {% csrf_token %}
+              <button class="btn btn-danger-ghost" type="submit">Удалить</button>
+            </form>
+          </div>
+        </div>
+        {% if material.body %}<p>{{ material.body|linebreaksbr }}</p>{% endif %}
+        {% if material.link %}<p><a href="{{ material.link }}" target="_blank" rel="noopener">Ссылка</a></p>{% endif %}
+        {% with files=material.files.all %}
+          {% if files %}
+            <p class="muted tiny">Файлы</p>
+            <ul class="file-links">
+              {% for f in files %}
+                <li><a href="{% url 'classroom:download_material_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+  </template>
+</li>

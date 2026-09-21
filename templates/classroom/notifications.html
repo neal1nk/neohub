@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления — NeoHub{% endblock %}
+{% block nav_notifications %}is-active{% endblock %}
+{% block active_nav %}notifications{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">NeoHub</p>
+    <h1>Уведомления</h1>
+  </div>
+  <div class="btn-row">
+    <form
+      method="post"
+      action="{% url 'classroom:notifications_read_all' %}"
+      hx-post="{% url 'classroom:notifications_read_all' %}"
+      hx-target="#notifications-body"
+      hx-swap="innerHTML"
+    >
+      {% csrf_token %}
+      <button type="submit" class="btn btn-ghost">Прочитать все</button>
+    </form>
+    <form
+      method="post"
+      action="{% url 'classroom:notifications_clear' %}"
+      data-confirm
+      data-confirm-title="Очистить уведомления"
+      data-confirm-message="Удалить все уведомления безвозвратно?"
+      data-confirm-action="Очистить"
+      hx-post="{% url 'classroom:notifications_clear' %}"
+      hx-trigger="confirmed"
+      hx-target="#notifications-body"
+      hx-swap="innerHTML"
+    >
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger-ghost">Очистить</button>
+    </form>
+  </div>
+</section>
+
+<div class="list-window list-window-fill reveal delay">
+  <div class="list-window-head">
+    <h2 id="notifications-heading">Лента {% if notifications %}· {{ notifications|length }}{% endif %}</h2>
+  </div>
+  <div class="list-window-body list-window-body-fill" id="notifications-body">
+    {% include "classroom/_notifications_list_body.html" %}
+  </div>
+</div>
+{% endblock %}

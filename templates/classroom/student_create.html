@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Новый ученик — NeoHub{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Преподаватель</p>
+    <h1>Новый ученик</h1>
+    <p class="muted">Создайте аккаунт и передайте логин с паролем лично.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:teacher_dashboard' %}">Назад</a>
+</section>
+
+<form
+  method="post"
+  class="form-panel reveal delay"
+  x-data="studentCreateForm()"
+>
+  {% csrf_token %}
+  <label class="field">
+    <span>{{ form.display_name.label }}</span>
+    {{ form.display_name }}
+    {% if form.display_name.errors %}<span class="field-error">{{ form.display_name.errors|striptags }}</span>{% endif %}
+  </label>
+  <label class="field">
+    <span>{{ form.username.label }}</span>
+    {{ form.username }}
+    {% if form.username.errors %}<span class="field-error">{{ form.username.errors|striptags }}</span>{% endif %}
+  </label>
+  <label class="field">
+    <span>{{ form.password.label }}</span>
+    {{ form.password }}
+    {% if form.password.errors %}<span class="field-error">{{ form.password.errors|striptags }}</span>{% endif %}
+  </label>
+  <label class="field">
+    <span>{{ form.password_confirm.label }}</span>
+    {{ form.password_confirm }}
+    {% if form.password_confirm.errors %}<span class="field-error">{{ form.password_confirm.errors|striptags }}</span>{% endif %}
+  </label>
+  <div class="btn-row">
+    <button type="button" class="btn btn-ghost" @click="generateCredentials()">Сгенерировать логин и пароль</button>
+    <button type="button" class="btn btn-secondary" @click="copyWelcome()">
+      <span x-text="copied ? 'Скопировано' : 'Скопировать логин и пароль'">Скопировать логин и пароль</span>
+    </button>
+    <button type="submit" class="btn btn-primary">Создать ученика</button>
+  </div>
+  <p class="muted tiny" x-show="copyError" x-text="copyError" x-cloak></p>
+</form>
+{% endblock %}

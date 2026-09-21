@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Получить доступ — NeoHub{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}auth-main{% endblock %}
+
+{% block content %}
+<section class="auth-hero auth-hero-single">
+  <form method="post" class="auth-card reveal" hx-boost="false" id="activation-form">
+    {% csrf_token %}
+    <p class="eyebrow">Активация</p>
+    <h1>Получить доступ</h1>
+    <p class="muted">Введите код активации в формате XXXX-XXXX-XXXX-XXXX.</p>
+
+    <label class="field">
+      <span>Код активации</span>
+      <div class="activation-code-row" id="activation-code-row">
+        <input type="text" class="input activation-seg" maxlength="4" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Часть 1" data-seg="0">
+        <span class="activation-dash" aria-hidden="true">-</span>
+        <input type="text" class="input activation-seg" maxlength="4" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Часть 2" data-seg="1">
+        <span class="activation-dash" aria-hidden="true">-</span>
+        <input type="text" class="input activation-seg" maxlength="4" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Часть 3" data-seg="2">
+        <span class="activation-dash" aria-hidden="true">-</span>
+        <input type="text" class="input activation-seg" maxlength="4" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Часть 4" data-seg="3">
+      </div>
+      <input type="hidden" name="code" id="activation-code-value" value="">
+      {% if form.code.errors %}<span class="field-error">{{ form.code.errors|striptags }}</span>{% endif %}
+    </label>
+
+    <button type="submit" class="btn btn-primary btn-block">Продолжить</button>
+    <p class="auth-access-link">
+      <a href="{% url 'accounts:login' %}">Назад ко входу</a>
+    </p>
+  </form>
+</section>
+{% endblock %}

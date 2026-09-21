@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация преподавателя — NeoHub{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}auth-main{% endblock %}
+
+{% block content %}
+<section class="auth-hero auth-hero-single">
+  <form method="post" class="auth-card reveal" hx-boost="false">
+    {% csrf_token %}
+    <p class="eyebrow">Доступ открыт</p>
+    <h1>Аккаунт преподавателя</h1>
+    <p class="muted">Заполните данные для входа в NeoHub.</p>
+
+    {% for field in form %}
+      <label class="field">
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+      </label>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
+    <p class="auth-access-link">
+      <a href="{% url 'accounts:login' %}">Уже есть аккаунт — войти</a>
+    </p>
+  </form>
+</section>
+{% endblock %}

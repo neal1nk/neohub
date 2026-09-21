@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать теорию — NeoHub{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Теория · {{ student.profile.get_display_name }}</p>
+    <h1>Редактировать материал</h1>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:student_detail' student.id %}?tab=theory">Назад</a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="form-panel reveal delay">
+  {% csrf_token %}
+  {% for field in form %}
+    <label class="field">
+      <span>{{ field.label }}</span>
+      {{ field }}
+      {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+    </label>
+  {% endfor %}
+
+  {% with files=material.files.all %}
+    {% if files %}
+      <div class="field">
+        <span>Текущие файлы</span>
+        <ul class="file-links file-links-editable">
+          {% for f in files %}
+            <li>
+              <a href="{% url 'classroom:download_material_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a>
+              <label class="file-remove-check tiny muted">
+                <input type="checkbox" name="remove_files" value="{{ f.id }}">
+                удалить
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="field">
+    <span>Добавить файлы</span>
+    {% include "partials/dropzone.html" %}
+  </div>
+  <div class="btn-row">
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a class="btn btn-ghost" href="{% url 'classroom:student_detail' student.id %}?tab=theory">Отмена</a>
+  </div>
+</form>
+{% endblock %}

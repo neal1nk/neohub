@@ -1,0 +1,328 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NeoHub{% endblock %}</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'img/favicon.svg' %}">
+  <meta name="theme-color" content="#141414">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/ghub.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <script src="{% static 'js/neohub.js' %}" defer></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body
+  class="{% if user.is_authenticated %}has-sidebar{% endif %} {% if exam_lock %}exam-lock{% endif %} {% block body_class %}{% endblock %}"
+  x-data="appShell()"
+  {% if user.is_authenticated %}
+  data-notif-poll="{% url 'classroom:notifications_poll' %}"
+  data-notif-latest="{% with n=user.notifications.first %}{% if n %}{{ n.id }}{% else %}0{% endif %}{% endwith %}"
+  {% endif %}
+>
+  <div class="auth-loader" x-show="authLoading" x-cloak>
+    <div class="auth-loader-card">
+      <div class="auth-loader-spinner" aria-hidden="true"></div>
+      <p class="brand-name" x-text="authLoadingText">Загрузка…</p>
+      <span class="muted tiny">NeoHub</span>
+    </div>
+  </div>
+
+  <div class="notif-toast-stack" aria-live="polite">
+    <template x-for="toast in notifToasts" :key="toast.id">
+      <a
+        class="notif-toast"
+        :href="toast.link || '{% url 'classroom:notifications' %}'"
+        @click="dismissNotifToast(toast.id)"
+      >
+        <strong x-text="toast.title"></strong>
+        <span class="muted tiny" x-text="toast.message"></span>
+      </a>
+    </template>
+  </div>
+
+  <div
+    class="confirm-overlay"
+    x-show="confirmOpen"
+    x-cloak
+    @keydown.escape.window="closeConfirm()"
+    @click.self="closeConfirm()"
+  >
+    <div class="confirm-modal" @click.stop>
+      <h2 x-text="confirmTitle">Подтверждение</h2>
+      <p class="muted" x-text="confirmMessage"></p>
+      <template x-if="confirmRequireLogin">
+        <label class="field">
+          <span>Введите логин ученика: <strong x-text="confirmRequireLogin"></strong></span>
+          <input
+            type="text"
+            class="input"
+            x-model="confirmLoginInput"
+            autocomplete="off"
+            placeholder="Логин"
+            @keydown.enter.prevent="submitConfirm()"
+          >
+        </label>
+      </template>
+      <template x-if="confirmUseSlider">
+        <div
+          class="confirm-slider"
+          :class="{
+            'is-disabled': !canSubmitConfirm(),
+            'is-done': sliderDone,
+            'is-dragging': sliderDragging,
+            'is-returning': sliderAnimating && !sliderDragging
+          }"
+          @pointerdown="onSliderPointerDown($event)"
+          @pointermove="onSliderPointerMove($event)"
+          @pointerup="onSliderPointerUp($event)"
+          @pointercancel="onSliderPointerUp($event)"
+        >
+          <div class="confirm-slider-track">
+            <div
+              class="confirm-slider-fill"
+              :style="'width:' + sliderFillWidth + 'px'"
+            ></div>
+            <span class="confirm-slider-hint" x-text="sliderDone ? 'Готово' : ('Проведите, чтобы ' + (confirmActionLabel || 'подтвердить').toLowerCase())"></span>
+            <div
+              class="confirm-slider-knob"
+              :style="'transform: translate3d(' + sliderOffset + 'px, -50%, 0)'"
+            >
+              <svg class="confirm-slider-arrow" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <path fill="currentColor" d="M7.2 4.3 12.9 10l-5.7 5.7 1.4 1.4L15.7 10 8.6 2.9 7.2 4.3z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="btn-row" :class="{ 'btn-row-slider': confirmUseSlider }">
+        <button type="button" class="btn btn-ghost" id="neohub-confirm-cancel" @click="closeConfirm()">Отмена</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="neohub-confirm-ok"
+          x-show="!confirmUseSlider"
+          :disabled="Boolean(confirmRequireLogin) && confirmLoginInput !== confirmRequireLogin"
+          @click.prevent.stop="submitConfirm()"
+        >
+          <span x-text="confirmActionLabel">Подтвердить</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {% if user.is_authenticated %}
+  <aside class="sidebar" :class="{ 'is-open': sidebarOpen }">
+    {% if exam_lock and active_credit %}
+    <a class="brand soft-nav" href="{% url 'classroom:assignment_submit' active_credit.id %}">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">NeoHub</span>
+    </a>
+    {% else %}
+    <a class="brand soft-nav" href="{% if user_profile.is_teacher %}{% url 'classroom:teacher_dashboard' %}{% else %}{% url 'classroom:student_dashboard' %}{% endif %}"
+       hx-get="{% if user_profile.is_teacher %}{% url 'classroom:teacher_dashboard' %}{% else %}{% url 'classroom:student_dashboard' %}{% endif %}"
+       hx-target="#page-content"
+       hx-select="#page-content"
+       hx-select-oob="#sidebar-extra"
+       hx-swap="outerHTML"
+       hx-push-url="true">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">NeoHub</span>
+    </a>
+    {% endif %}
+
+    <nav class="sidebar-nav">
+      <p class="sidebar-label">Меню</p>
+      {% if exam_lock and active_credit %}
+        <p class="muted tiny" style="padding: 0.5rem 0.85rem">
+          Идёт зачёт «{{ active_credit.title }}». Остальные разделы недоступны.
+        </p>
+        <a class="sidebar-link soft-nav is-active" href="{% url 'classroom:assignment_submit' active_credit.id %}">К зачёту</a>
+      {% elif user_profile.is_teacher %}
+        <a class="sidebar-link soft-nav {% block nav_teacher_students %}{% endblock %}"
+           data-nav="teacher-students"
+           href="{% url 'classroom:teacher_dashboard' %}"
+           hx-get="{% url 'classroom:teacher_dashboard' %}"
+           hx-target="#page-content"
+           hx-select="#page-content"
+           hx-select-oob="#sidebar-extra"
+           hx-swap="outerHTML"
+           hx-push-url="true">Ученики</a>
+        <a class="sidebar-link soft-nav {% block nav_teacher_profile %}{% endblock %}"
+           data-nav="teacher-profile"
+           href="{% url 'accounts:teacher_profile' %}"
+           hx-get="{% url 'accounts:teacher_profile' %}"
+           hx-target="#page-content"
+           hx-select="#page-content"
+           hx-select-oob="#sidebar-extra"
+           hx-swap="outerHTML"
+           hx-push-url="true">Профиль</a>
+      {% else %}
+        <a class="sidebar-link soft-nav {% block nav_student_home %}{% endblock %}"
+           data-nav="student-home"
+           href="{% url 'classroom:student_dashboard' %}"
+           hx-get="{% url 'classroom:student_dashboard' %}"
+           hx-target="#page-content"
+           hx-select="#page-content"
+           hx-select-oob="#sidebar-extra"
+           hx-swap="outerHTML"
+           hx-push-url="true">Главная</a>
+        <a class="sidebar-link soft-nav {% block nav_student_theory %}{% endblock %}"
+           data-nav="student-theory"
+           href="{% url 'classroom:student_materials' %}"
+           hx-get="{% url 'classroom:student_materials' %}"
+           hx-target="#page-content"
+           hx-select="#page-content"
+           hx-select-oob="#sidebar-extra"
+           hx-swap="outerHTML"
+           hx-push-url="true">Теория</a>
+        <div class="nav-flyout">
+          <button
+            type="button"
+            class="sidebar-link nav-flyout-trigger {% block nav_student_tasks %}{% endblock %}"
+            data-nav="student-tasks"
+            @click="toggleTasks()"
+            :aria-expanded="tasksOpen.toString()"
+          >
+            <span>Задания</span>
+            <span class="nav-flyout-caret" :class="{ 'is-open': tasksOpen }">▾</span>
+          </button>
+          <div
+            class="nav-flyout-panel"
+            :class="{ 'is-open': tasksOpen }"
+            :aria-hidden="(!tasksOpen).toString()"
+          >
+            <div class="nav-flyout-inner">
+            <a class="sidebar-link nested soft-nav"
+               data-nav="student-tasks"
+               data-nav-query="all"
+               href="{% url 'classroom:student_assignments' %}?type=all"
+               hx-get="{% url 'classroom:student_assignments' %}?type=all"
+               hx-target="#page-content"
+               hx-select="#page-content"
+               hx-select-oob="#sidebar-extra"
+               hx-swap="outerHTML"
+               hx-push-url="true">Все</a>
+            <a class="sidebar-link nested soft-nav"
+               data-nav="student-tasks"
+               data-nav-query="homework"
+               href="{% url 'classroom:student_assignments' %}?type=homework"
+               hx-get="{% url 'classroom:student_assignments' %}?type=homework"
+               hx-target="#page-content"
+               hx-select="#page-content"
+               hx-select-oob="#sidebar-extra"
+               hx-swap="outerHTML"
+               hx-push-url="true">Домашки</a>
+            <a class="sidebar-link nested soft-nav"
+               data-nav="student-tasks"
+               data-nav-query="practice"
+               href="{% url 'classroom:student_assignments' %}?type=practice"
+               hx-get="{% url 'classroom:student_assignments' %}?type=practice"
+               hx-target="#page-content"
+               hx-select="#page-content"
+               hx-select-oob="#sidebar-extra"
+               hx-swap="outerHTML"
+               hx-push-url="true">Практика</a>
+            <a class="sidebar-link nested soft-nav"
+               data-nav="student-tasks"
+               data-nav-query="credit"
+               href="{% url 'classroom:student_assignments' %}?type=credit"
+               hx-get="{% url 'classroom:student_assignments' %}?type=credit"
+               hx-target="#page-content"
+               hx-select="#page-content"
+               hx-select-oob="#sidebar-extra"
+               hx-swap="outerHTML"
+               hx-push-url="true">Зачёты</a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      {% if not exam_lock %}
+      <a class="sidebar-link soft-nav {% block nav_notifications %}{% endblock %}"
+         data-nav="notifications"
+         href="{% url 'classroom:notifications' %}"
+         hx-get="{% url 'classroom:notifications' %}"
+         hx-target="#page-content"
+         hx-select="#page-content"
+         hx-select-oob="#sidebar-extra"
+         hx-swap="outerHTML"
+         hx-push-url="true">
+        Уведомления
+        <span id="nav-notif-badge">{% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</span>
+      </a>
+      <div id="sidebar-extra">
+        {% block sidebar_extra %}{% endblock %}
+      </div>
+      {% else %}
+      <div id="sidebar-extra"></div>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">{{ user_profile.get_display_name }}</div>
+      <form
+        method="post"
+        action="{% url 'accounts:logout' %}"
+        data-confirm
+        data-confirm-title="Выйти из аккаунта?"
+        data-confirm-message="Вы уверены, что хотите выйти?"
+        data-confirm-action="Выйти"
+        data-auth-loading="Выход из аккаунта…"
+        hx-boost="false"
+      >
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-block">Выйти</button>
+      </form>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" @click="sidebarOpen = false" x-show="sidebarOpen" x-cloak></div>
+  {% endif %}
+
+  <div class="workspace">
+    {% if user.is_authenticated %}
+    <header class="mobile-bar">
+      <button type="button" class="btn btn-ghost menu-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="Меню">☰</button>
+      {% if exam_lock and active_credit %}
+      <a class="brand brand-compact soft-nav" href="{% url 'classroom:assignment_submit' active_credit.id %}">
+        <span class="brand-mark">N</span>
+        <span class="brand-name">NeoHub</span>
+      </a>
+      {% else %}
+      <a class="brand brand-compact soft-nav" href="{% if user_profile.is_teacher %}{% url 'classroom:teacher_dashboard' %}{% else %}{% url 'classroom:student_dashboard' %}{% endif %}"
+         hx-get="{% if user_profile.is_teacher %}{% url 'classroom:teacher_dashboard' %}{% else %}{% url 'classroom:student_dashboard' %}{% endif %}"
+         hx-target="#page-content"
+         hx-select="#page-content"
+         hx-select-oob="#sidebar-extra"
+         hx-swap="outerHTML"
+         hx-push-url="true">
+        <span class="brand-mark">N</span>
+        <span class="brand-name">NeoHub</span>
+      </a>
+      {% endif %}
+    </header>
+    {% endif %}
+
+    <main
+      id="page-content"
+      class="main {% block main_class %}{% endblock %}"
+      data-active-nav="{% block active_nav %}{% endblock %}"
+    >
+      {% if messages %}
+        <div class="flash-stack">
+          {% for message in messages %}
+            <div class="flash flash-{{ message.tags }}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4200)">
+              <span>{{ message }}</span>
+              <button type="button" class="flash-close" @click="show = false" aria-label="Закрыть">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

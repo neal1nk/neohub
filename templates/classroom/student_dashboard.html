@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Мой кабинет — NeoHub{% endblock %}
+{% block nav_student_home %}is-active{% endblock %}
+{% block active_nav %}student-home{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Кабинет ученика</p>
+    <h1>Привет, {{ user_profile.get_display_name }}</h1>
+    <p class="muted">Ваш рейтинг, ближайшие задания и недавние оценки.</p>
+  </div>
+</section>
+
+{% if teacher %}
+<section class="teacher-banner reveal delay" x-data="{ contactsOpen: false }">
+  <div>
+    <p class="eyebrow">Преподаватель</p>
+    <h2>{{ teacher.profile.get_display_name }}</h2>
+  </div>
+  <button type="button" class="btn btn-secondary" @click="contactsOpen = !contactsOpen">
+    Связаться
+  </button>
+  <div class="teacher-contacts" x-show="contactsOpen" x-cloak x-transition>
+    {% if teacher.email %}
+      <a href="mailto:{{ teacher.email }}">Почта: {{ teacher.email }}</a>
+    {% endif %}
+    {% if teacher.profile.telegram %}
+      <span>Telegram: {{ teacher.profile.telegram }}</span>
+    {% endif %}
+    {% if teacher.profile.whatsapp %}
+      <span>WhatsApp: {{ teacher.profile.whatsapp }}</span>
+    {% endif %}
+    {% if teacher.profile.max_messenger %}
+      <span>MAX: {{ teacher.profile.max_messenger }}</span>
+    {% endif %}
+    {% if not teacher.email and not teacher.profile.telegram and not teacher.profile.whatsapp and not teacher.profile.max_messenger %}
+      <span class="muted">Контакты пока не указаны.</span>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<section class="rating-hero reveal delay" style="--score-color: {{ rating_color }}">
+  <div class="rating-hero-top">
+    <div>
+      <p class="eyebrow">Балльный рейтинг</p>
+      <div class="rating-value">{{ rating_display }}<span class="muted">/100</span></div>
+    </div>
+  </div>
+  <div class="score-track score-track-lg">
+    <div class="score-fill" style="width: {{ rating_display }}%; background: {{ rating_color }}"></div>
+  </div>
+  <p class="rating-breakdown">{{ rating_breakdown_text }}</p>
+</section>
+
+<div class="home-grid reveal delay-2">
+  <div class="list-window list-window-fill home-deadlines">
+    <div class="list-window-head">
+      <h2>Ближайшие задания</h2>
+      <a href="{% url 'classroom:student_assignments' %}">Все задания</a>
+    </div>
+    <div class="list-window-body list-window-body-fill">
+      {% if upcoming %}
+        <ul class="item-grid item-grid-home">
+          {% for assignment in upcoming %}
+            {% include "classroom/_assignment_item_student.html" %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Нет активных заданий.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="home-side">
+    <div class="list-panel">
+      <div class="panel-head">
+        <h2>Новая теория</h2>
+        <a href="{% url 'classroom:student_materials' %}">Все</a>
+      </div>
+      {% if materials %}
+        <ul class="item-list">
+          {% for material in materials %}
+            <li class="item-card compact">
+              <strong>{{ material.title }}</strong>
+              <p class="muted tiny">{{ material.created_at|date:"d.m.Y" }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Материалов пока нет.</p>
+      {% endif %}
+    </div>
+
+    <div class="list-panel">
+      <h2>Недавние оценки</h2>
+      {% if recent_graded %}
+        <ul class="item-list">
+          {% for assignment in recent_graded %}
+            <li class="item-card compact">
+              <div class="item-head">
+                <span class="type-badge type-badge-{{ assignment.assignment_type }} {% if assignment.is_credit %}{{ assignment.credit_badge_modifier }}{% endif %}">{{ assignment.type_badge_label }}</span>
+              </div>
+              <strong>{{ assignment.title }}</strong>
+              <p>
+                Оценка:
+                <span style="color: {{ assignment.score_color }}; font-weight: 600">
+                  {{ assignment.submission.display_grade }}
+                </span>
+              </p>
+              {% if assignment.grade_note %}
+                <p class="muted tiny">{{ assignment.grade_note }}</p>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Оценок пока нет.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

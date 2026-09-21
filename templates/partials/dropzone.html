@@ -1,0 +1,32 @@
+{% comment %}Drag-and-drop multi-file zone — accumulates files{% endcomment %}
+<div
+  class="dropzone"
+  x-data="dropzone"
+  @dragover.prevent="dragging = true"
+  @dragleave.prevent="dragging = false"
+  @drop.prevent="onDrop($event)"
+  :class="{ 'is-dragging': dragging }"
+>
+  <input
+    type="file"
+    name="files"
+    multiple
+    class="dropzone-input"
+    x-ref="input"
+    accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx"
+    @change="onSelect($event)"
+  >
+  <div class="dropzone-body">
+    <strong>Перетащите файлы сюда</strong>
+    <span class="muted tiny">Фото и документы (PDF, DOC/DOCX, TXT…) · до 10 МБ · новые файлы добавляются к уже выбранным</span>
+  </div>
+  <p class="field-error" x-show="error" x-text="error" x-cloak></p>
+  <ul class="dropzone-list" x-show="files.length > 0" x-cloak>
+    <template x-for="(file, index) in files" :key="index + '-' + file.name + '-' + file.size">
+      <li>
+        <span x-text="file.name"></span>
+        <button type="button" class="btn btn-ghost btn-sm" @click.prevent="removeAt(index)" title="Убрать">×</button>
+      </li>
+    </template>
+  </ul>
+</div>

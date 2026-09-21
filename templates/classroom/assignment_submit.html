@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Сдача — NeoHub{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">{{ assignment.get_assignment_type_display }}</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="muted">
+      {% if submission and submission.submitted_at %}
+        Сдано: {{ submission.submitted_at|date:"d.m.Y H:i" }}
+        {% if assignment.deadline %} · дедлайн {{ assignment.deadline|date:"d.m.Y H:i" }}{% endif %}
+        ·
+      {% elif assignment.deadline %}
+        Дедлайн: {{ assignment.deadline|date:"d.m.Y H:i" }}
+        {% if assignment.should_show_deadline_countdown %}
+          · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+        {% endif %}
+        ·
+      {% endif %}
+      статус: {{ assignment.status_label }}
+      {% if not assignment.is_for_grade %} · не на оценку{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:student_assignments' %}?type={{ assignment.assignment_type }}">Назад</a>
+</section>
+
+<section class="split-layout reveal delay">
+  <div class="list-panel">
+    <h2>Условие</h2>
+    {% if assignment.description %}
+      <p>{{ assignment.description|linebreaksbr }}</p>
+    {% else %}
+      <p class="muted">Описание не указано.</p>
+    {% endif %}
+    {% if assignment.files.all %}
+      <ul class="file-links">
+        {% for f in assignment.files.all %}
+          <li><a href="{% url 'classroom:download_assignment_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if submission and submission.is_graded %}
+      <div class="submission-box">
+        <p>
+          <strong>Оценка:</strong>
+          <span style="color: {{ assignment.score_color }}; font-weight: 600">{{ submission.display_grade }}</span>
+        </p>
+        {% if assignment.is_for_grade and submission.grade is not None %}
+        <div class="score-track">
+          <div class="score-fill" style="width: {{ submission.grade }}%; background: {{ assignment.score_color }}"></div>
+        </div>
+        {% elif not assignment.is_for_grade and submission.formal_grade %}
+        <div class="score-track">
+          <div class="score-fill" style="width: {{ assignment.formal_grade_level }}%; background: {{ assignment.score_color }}"></div>
+        </div>
+        {% endif %}
+        {% if submission.teacher_comment %}
+          <p class="muted tiny">Пояснение преподавателя</p>
+          <p>{{ submission.teacher_comment|linebreaksbr }}</p>
+        {% endif %}
+        {% if submission.clarification_requested %}
+          <p class="muted tiny">Запрос на пояснение отправлен — ожидайте ответа</p>
+          {% if submission.student_comment %}
+            <p class="muted">Ваш вопрос: {{ submission.student_comment|linebreaksbr }}</p>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% if not submission.clarification_requested %}
+      <form method="post" action="{% url 'classroom:grade_feedback' assignment.id %}" class="form-panel grade-feedback-form">
+        {% csrf_token %}
+        <h2>Пояснение</h2>
+        <p class="muted tiny">Если оценка непонятна — попросите преподавателя пояснить.</p>
+        <label class="field">
+          <span>Вопрос (необязательно)</span>
+          <textarea
+            class="input textarea"
+            name="student_comment"
+            rows="3"
+            placeholder="Что непонятно в оценке?"
+          ></textarea>
+        </label>
+        <button type="submit" class="btn btn-secondary">Попросить пояснение</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {% if locked %}
+  <div class="form-panel">
+    <h2>Работа отправлена</h2>
+    <p class="muted">Домашние и практические работы нельзя изменять после отправки.</p>
+    {% if submission.text %}<p>{{ submission.text|linebreaksbr }}</p>{% endif %}
+    {% if submission.files.all %}
+      <ul class="file-links">
+        {% for f in submission.files.all %}
+          <li><a href="{% url 'classroom:download_submission_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+  {% else %}
+  <div
+    class="form-panel"
+    x-data="draftSubmit({
+      autosaveUrl: '{% url 'classroom:assignment_draft_autosave' assignment.id %}',
+      uploadUrl: '{% url 'classroom:assignment_draft_upload' assignment.id %}',
+      csrf: '{{ csrf_token }}',
+      initialText: `{{ submission.text|default_if_none:''|escapejs }}`,
+      initialFiles: [
+        {% for f in submission.files.all %}
+        {
+          id: {{ f.id }},
+          name: '{{ f.original_name|default:f.file.name|escapejs }}',
+          url: '{% url 'classroom:download_submission_file' f.id %}',
+          deleteUrl: '{% url 'classroom:submission_file_delete' f.id %}'
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    })"
+  >
+    <h2>Сдать работу</h2>
+    <p class="muted tiny">Черновик сохраняется автоматически.</p>
+    <p class="muted tiny" x-show="saveState" x-text="saveState"></p>
+    <label class="field">
+      <span>Ответ</span>
+      <textarea
+        class="input textarea"
+        rows="5"
+        x-model="text"
+        @input.debounce.800ms="autosaveText()"
+        placeholder="Ваш ответ…"
+      ></textarea>
+    </label>
+    <div class="field">
+      <span>Файлы</span>
+      <div
+        class="dropzone"
+        :class="{ 'is-dragging': dragging }"
+        @dragover.prevent="dragging = true"
+        @dragleave.prevent="dragging = false"
+        @drop.prevent="onDrop($event)"
+      >
+        <input type="file" multiple class="dropzone-input" accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" @change="onSelect($event)">
+        <div class="dropzone-body">
+          <strong>Перетащите файлы сюда</strong>
+          <span class="muted tiny">Фото и документы · до 10 МБ · загрузка сразу, файлы добавляются</span>
+        </div>
+      </div>
+      <ul class="file-links file-links-editable" x-show="uploaded.length" x-cloak>
+        <template x-for="f in uploaded" :key="f.id">
+          <li>
+            <a :href="f.url" target="_blank" rel="noopener" x-text="f.name"></a>
+            <button type="button" class="btn btn-ghost btn-sm file-remove" @click.prevent="removeFile(f)" title="Удалить">×</button>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <form
+      method="post"
+      data-confirm
+      data-confirm-slider
+      data-confirm-title="Отправить работу"
+      data-confirm-message="Отправить задание преподавателю? После отправки домашку и практику нельзя будет изменить."
+      data-confirm-action="Отправить"
+      @submit="beforeSubmit($event)"
+    >
+      {% csrf_token %}
+      <input type="hidden" name="text" :value="text">
+      <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

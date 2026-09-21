@@ -1,0 +1,2 @@
+{% include "classroom/_notification_item.html" with note=note %}
+<span id="nav-notif-badge" hx-swap-oob="innerHTML">{% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</span>

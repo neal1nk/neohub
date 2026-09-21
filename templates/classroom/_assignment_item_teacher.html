@@ -1,0 +1,248 @@
+<li
+  class="item-card teacher-assignment-row {% if assignment.compute_status == 'open' or assignment.compute_status == 'overdue' %}is-pending{% endif %} {% if assignment.is_closed %}is-closed{% endif %}"
+  data-filter-text="{{ assignment.title }} {{ assignment.status_label }} {{ assignment.type_badge_label }}"
+  x-data="{ open: false }"
+>
+  <button type="button" class="teacher-assignment-summary" @click="open = true">
+    <div class="teacher-assignment-main">
+      <div class="card-top">
+        <span class="type-badge type-badge-{{ assignment.assignment_type }} {% if assignment.is_credit %}{{ assignment.credit_badge_modifier }}{% endif %}">{{ assignment.type_badge_label }}</span>
+        <div class="card-badges">
+          <span class="status {% if assignment.is_closed and assignment.compute_status != 'graded' %}status-closed{% else %}status-{{ assignment.compute_status }}{% endif %}">{{ assignment.status_label }}</span>
+          {% if assignment.show_overdue_badge and assignment.compute_status != 'overdue' and not assignment.is_closed %}
+            <span class="status status-overdue">Просрочено</span>
+          {% endif %}
+          {% if not assignment.is_for_grade %}<span class="status status-ungraded">формально</span>{% endif %}
+        </div>
+      </div>
+      <h3 class="card-title">{{ assignment.title }}</h3>
+    </div>
+    <div class="teacher-assignment-score" style="color: {{ assignment.score_color }}">
+      {% if assignment.is_for_grade %}
+        {% if assignment.submission and assignment.submission.grade is not None %}
+          {{ assignment.submission.display_grade }}
+        {% else %}
+          —/100
+        {% endif %}
+      {% else %}
+        {% if assignment.submission and assignment.submission.formal_grade %}
+          {{ assignment.submission.get_formal_grade_display }}
+        {% else %}
+          —
+        {% endif %}
+      {% endif %}
+    </div>
+    <span class="chevron" aria-hidden="true">→</span>
+  </button>
+
+  <template x-teleport="body">
+  <div
+    class="sheet-overlay"
+    x-show="open"
+    x-cloak
+    @keydown.escape.window="if (open) open = false"
+    @click.self="open = false"
+  >
+    <div class="sheet-panel teacher-detail-sheet" @click.stop>
+      <div class="sheet-head">
+        <div>
+          <p class="eyebrow">{{ assignment.get_assignment_type_display }}</p>
+          <h2>{{ assignment.title }}</h2>
+        </div>
+        <button type="button" class="btn btn-ghost" @click="open = false">Закрыть</button>
+      </div>
+      <div class="sheet-body">
+        <div class="item-head">
+          <div>
+            <span class="status {% if assignment.is_closed and assignment.compute_status != 'graded' %}status-closed{% else %}status-{{ assignment.compute_status }}{% endif %}">{{ assignment.status_label }}</span>
+            {% if assignment.show_overdue_badge and assignment.compute_status != 'overdue' and not assignment.is_closed %}
+              <span class="status status-overdue">Просрочено</span>
+            {% endif %}
+            {% if not assignment.is_for_grade %}<span class="status status-ungraded">формально</span>{% endif %}
+            {% if assignment.submission and assignment.submission.clarification_requested %}
+              <span class="status status-overdue">просят пояснить</span>
+            {% endif %}
+          </div>
+          <div class="btn-row">
+            {% if assignment.submission and assignment.submission.is_submitted %}
+              <button type="button" class="btn btn-secondary btn-sm" disabled title="Нельзя изменить: работа уже на проверке">Изменить</button>
+            {% else %}
+              <a class="btn btn-secondary btn-sm" href="{% url 'classroom:assignment_edit' assignment.id %}">Изменить</a>
+            {% endif %}
+            <form
+              method="post"
+              action="{% url 'classroom:assignment_delete' assignment.id %}"
+              data-confirm
+              data-confirm-title="Удалить задание"
+              data-confirm-message="Удалить «{{ assignment.title|escape }}»?"
+              data-confirm-action="Удалить"
+            >
+              {% csrf_token %}
+              <button class="btn btn-danger-ghost" type="submit">Удалить</button>
+            </form>
+          </div>
+        </div>
+
+        {% if assignment.description %}<p>{{ assignment.description|linebreaksbr }}</p>{% endif %}
+        {% if assignment.deadline %}
+          <p class="muted">
+            Дедлайн: {{ assignment.deadline|date:"d.m.Y H:i" }}
+            {% if assignment.should_show_deadline_countdown %}
+              · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+            {% endif %}
+            {% if assignment.submission and assignment.submission.submitted_at %}
+              · сдано {{ assignment.submission.submitted_at|date:"d.m.Y H:i" }}
+            {% endif %}
+          </p>
+        {% elif assignment.submission and assignment.submission.submitted_at %}
+          <p class="muted">Сдано {{ assignment.submission.submitted_at|date:"d.m.Y H:i" }}</p>
+        {% else %}
+          <p class="muted">Без дедлайна</p>
+        {% endif %}
+
+        {% with files=assignment.files.all %}
+          {% if files %}
+            <p class="muted tiny">Файлы задания</p>
+            <ul class="file-links">
+              {% for f in files %}
+                <li><a href="{% url 'classroom:download_assignment_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        {% if assignment.is_for_grade %}
+          <div class="score-slider-block">
+            <div class="score-slider-head">
+              <span>Баллы</span>
+              <strong style="color: {{ assignment.score_color }}">
+                {% if assignment.submission and assignment.submission.grade is not None %}
+                  {{ assignment.submission.display_grade }}
+                {% else %}
+                  —/100
+                {% endif %}
+              </strong>
+            </div>
+            <div class="score-track">
+              <div
+                class="score-fill"
+                style="width: {% if assignment.submission and assignment.submission.grade is not None %}{{ assignment.submission.grade }}{% else %}0{% endif %}%; background: {{ assignment.score_color }}"
+              ></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="score-slider-block formal-grade-block">
+            <div class="score-slider-head">
+              <span>Формальная оценка</span>
+              <strong style="color: {{ assignment.score_color }}">
+                {% if assignment.submission and assignment.submission.formal_grade %}
+                  {{ assignment.submission.get_formal_grade_display }}
+                {% else %}
+                  —
+                {% endif %}
+              </strong>
+            </div>
+            <div class="score-track">
+              <div
+                class="score-fill"
+                style="width: {{ assignment.formal_grade_level }}%; background: {{ assignment.score_color }}"
+              ></div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if assignment.submission and assignment.submission.is_submitted %}
+          <div class="submission-box">
+            <p><strong>Сдача:</strong> {{ assignment.submission.submitted_at|date:"d.m.Y H:i" }}</p>
+            {% if assignment.submission.text %}<p>{{ assignment.submission.text|linebreaksbr }}</p>{% endif %}
+            {% with sfiles=assignment.submission.files.all %}
+              {% if sfiles %}
+                <ul class="file-links">
+                  {% for f in sfiles %}
+                    <li><a href="{% url 'classroom:download_submission_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+            {% if assignment.submission.is_graded %}
+              <p><strong>Оценка:</strong> {{ assignment.submission.display_grade }}</p>
+            {% endif %}
+            {% if assignment.submission.teacher_comment %}
+              <p class="muted tiny">Пояснение</p>
+              <p class="muted">{{ assignment.submission.teacher_comment|linebreaksbr }}</p>
+            {% endif %}
+            {% if assignment.submission.clarification_requested or assignment.submission.student_comment %}
+              <div class="submission-box" {% if assignment.submission.clarification_requested %}x-data="{ clarifyOpen: false }"{% endif %}>
+                {% if assignment.submission.clarification_requested %}
+                  <p>
+                    <strong>Запрос пояснения</strong>
+                    <span class="status status-overdue">ждут ответа</span>
+                  </p>
+                {% elif assignment.submission.student_comment %}
+                  <p><strong>Вопрос ученика</strong></p>
+                {% endif %}
+                {% if assignment.submission.student_comment %}
+                  <p>{{ assignment.submission.student_comment|linebreaksbr }}</p>
+                {% endif %}
+                {% if assignment.submission.clarification_requested %}
+                  <button type="button" class="btn btn-primary btn-sm" x-show="!clarifyOpen" @click="clarifyOpen = true">Пояснить</button>
+                  <form
+                    method="post"
+                    action="{% url 'classroom:grade_clarify' assignment.id %}"
+                    x-show="clarifyOpen"
+                    x-cloak
+                  >
+                    {% csrf_token %}
+                    <label class="field">
+                      <span>Пояснение</span>
+                      <textarea class="input textarea" name="clarification" rows="3" required placeholder="Поясните оценку ученику…"></textarea>
+                    </label>
+                    <div class="btn-row">
+                      <button type="submit" class="btn btn-primary">Отправить</button>
+                      <button type="button" class="btn btn-ghost" @click="clarifyOpen = false">Отмена</button>
+                    </div>
+                  </form>
+                {% endif %}
+              </div>
+            {% endif %}
+            <div class="btn-row">
+              <a class="btn btn-secondary" href="{% url 'classroom:assignment_grade' assignment.id %}">Просмотр</a>
+              {% if assignment.is_credit %}
+              <form
+                method="post"
+                action="{% url 'classroom:assignment_credit_retake' assignment.id %}"
+                data-confirm
+                data-confirm-title="Открыть пересдачу?"
+                data-confirm-message="Сбросятся ответ, файлы, таймер и оценка. Ученик сможет пройти зачёт заново."
+                data-confirm-action="Открыть пересдачу"
+              >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost">Пересдача</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <p class="muted">Ученик ещё не сдал работу.</p>
+          <div class="btn-row">
+            <a class="btn btn-secondary" href="{% url 'classroom:assignment_grade' assignment.id %}">Просмотр</a>
+            {% if assignment.is_credit and assignment.submission and assignment.submission.exam_started_at %}
+            <form
+              method="post"
+              action="{% url 'classroom:assignment_credit_retake' assignment.id %}"
+              data-confirm
+              data-confirm-title="Сбросить попытку?"
+              data-confirm-message="Текущая попытка зачёта будет сброшена. Ученик сможет начать заново."
+              data-confirm-action="Сбросить"
+            >
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost">Сбросить попытку</button>
+            </form>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  </template>
+</li>

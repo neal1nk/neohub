@@ -1,0 +1,12 @@
+{% if assignments %}
+  <ul class="item-grid">
+    {% for assignment in assignments %}
+      {% include "classroom/_assignment_item_student.html" %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="empty-state">
+    <h2>Нет заданий</h2>
+    <p class="muted">Когда преподаватель выдаст работу, она появится здесь.</p>
+  </div>
+{% endif %}

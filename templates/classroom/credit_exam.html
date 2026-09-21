@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Зачёт — {{ assignment.title }} — NeoHub{% endblock %}
+{% block body_class %}exam-mode exam-lock{% endblock %}
+{% block main_class %}exam-main{% endblock %}
+
+{% block content %}
+<div
+  class="credit-exam"
+  x-data="creditExam({
+    endsAt: '{{ ends_at_iso }}',
+    duration: {{ duration_seconds }},
+    remaining: {{ remaining_seconds }},
+    autosaveUrl: '{% url 'classroom:credit_autosave' assignment.id %}',
+    uploadUrl: '{% url 'classroom:credit_upload' assignment.id %}',
+    finishUrl: '{% url 'classroom:credit_finish' assignment.id %}',
+    csrf: '{{ csrf_token }}',
+    initialText: `{{ submission.text|default_if_none:''|escapejs }}`,
+    initialFiles: [
+      {% for f in submission.files.all %}
+      {
+        id: {{ f.id }},
+        name: '{{ f.original_name|default:f.file.name|escapejs }}',
+        url: '{% url 'classroom:download_submission_file' f.id %}',
+        deleteUrl: '{% url 'classroom:submission_file_delete' f.id %}'
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  })"
+  x-init="init()"
+>
+  <div class="credit-exam-top">
+    <div>
+      <p class="eyebrow">Зачёт · режим блокировки</p>
+      <h1>{{ assignment.title }}</h1>
+    </div>
+    <div class="credit-timer" :class="timerClass" x-text="timerLabel">--:--</div>
+  </div>
+
+  <div class="credit-warning" x-show="showFiveMinWarn" x-cloak @click.self="showFiveMinWarn = false">
+    <div class="credit-warning-card">
+      <h2>Осталось 5 минут!</h2>
+      <p class="muted">Пора прикреплять файлы и проверять ответы.</p>
+      <button type="button" class="btn btn-primary" @click="showFiveMinWarn = false">Понятно</button>
+    </div>
+  </div>
+
+  <div class="credit-exam-grid">
+    <section class="list-panel">
+      <h2>Инструкция</h2>
+      {% if assignment.instruction %}
+        <p>{{ assignment.instruction|linebreaksbr }}</p>
+      {% else %}
+        <p class="muted">Инструкция не указана.</p>
+      {% endif %}
+      {% if assignment.files.all %}
+        <h2 class="mt">Материалы преподавателя</h2>
+        <ul class="file-links">
+          {% for f in assignment.files.all %}
+            <li><a href="{% url 'classroom:download_assignment_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      <p class="muted tiny" x-show="saveState" x-text="saveState"></p>
+    </section>
+
+    <section class="form-panel">
+      <h2>Ответ / заметки</h2>
+      <label class="field">
+        <textarea
+          class="input textarea"
+          rows="10"
+          x-model="text"
+          @input.debounce.800ms="autosaveText()"
+          placeholder="Пишите ответ здесь — сохраняется автоматически…"
+        ></textarea>
+      </label>
+
+      <div class="field">
+        <span>Прикрепить файлы</span>
+        <div
+          class="dropzone"
+          :class="{ 'is-dragging': dragging }"
+          @dragover.prevent="dragging = true"
+          @dragleave.prevent="dragging = false"
+          @drop.prevent="onDrop($event)"
+        >
+          <input
+            type="file"
+            multiple
+            class="dropzone-input"
+            accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx"
+            @change="onSelect($event)"
+          >
+          <div class="dropzone-body">
+            <strong>Перетащите файлы сюда</strong>
+            <span class="muted tiny">Фото и документы · до 10 МБ · добавляются к уже загруженным</span>
+          </div>
+        </div>
+        <ul class="file-links file-links-editable" x-show="uploaded.length" x-cloak>
+          <template x-for="f in uploaded" :key="f.id">
+            <li>
+              <a :href="f.url" target="_blank" rel="noopener" x-text="f.name"></a>
+              <button type="button" class="btn btn-ghost btn-sm file-remove" @click.prevent="removeFile(f)" title="Удалить">×</button>
+            </li>
+          </template>
+        </ul>
+      </div>
+
+      <form
+        method="post"
+        action="{% url 'classroom:credit_finish' assignment.id %}"
+        data-confirm
+        data-confirm-slider
+        data-confirm-title="Сдать зачёт?"
+        data-confirm-message="Проверьте, что всё введено правильно и все нужные файлы прикреплены. После сдачи изменить работу нельзя."
+        data-confirm-action="Сдать"
+        @submit="beforeFinish($event)"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="text" :value="text">
+        <button type="submit" class="btn btn-primary btn-block">Закончить работу</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

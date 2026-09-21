@@ -1,0 +1,18 @@
+{% if notifications %}
+  <ul class="item-list">
+    {% for note in notifications %}
+      {% include "classroom/_notification_item.html" %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="empty-state">
+    <h2>Пока тихо</h2>
+    <p class="muted">Новые события появятся здесь.</p>
+  </div>
+{% endif %}
+{% if swap_heading %}
+<h2 id="notifications-heading" hx-swap-oob="true">Лента{% if notifications %} · {{ notifications|length }}{% endif %}</h2>
+{% endif %}
+{% if swap_badge %}
+<span id="nav-notif-badge" hx-swap-oob="innerHTML">{% if unread_notifications %}<span class="badge">{{ unread_notifications }}</span>{% endif %}</span>
+{% endif %}

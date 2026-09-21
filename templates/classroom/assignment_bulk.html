@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Массовая выдача — NeoHub{% endblock %}
+{% block nav_teacher_students %}is-active{% endblock %}
+{% block active_nav %}teacher-students{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Преподаватель</p>
+    <h1>Выдать задание нескольким</h1>
+    <p class="muted">Одно задание сразу нескольким ученикам.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:teacher_dashboard' %}">Назад</a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="bulk-layout reveal delay" x-data="bulkAssign()">
+  {% csrf_token %}
+
+  <section class="form-panel">
+    <h2>Задание</h2>
+    <label class="field">
+      <span>Тип</span>
+      <select name="assignment_type" class="input" @change="window.location.href = '{% url 'classroom:assignment_bulk_create' %}?type=' + $event.target.value">
+        {% for value, label in type_choices %}
+          <option value="{{ value }}" {% if value == assignment_type %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% for field in form %}
+      {% if field.name == 'is_closed' %}
+        <label class="lock-switch lock-switch-form">
+          {{ field }}
+          <span class="lock-slider"><span class="lock-knob" aria-hidden="true">🔒</span></span>
+          <span class="lock-label">{{ field.label }}</span>
+        </label>
+      {% else %}
+        <label class="field">
+          <span>{{ field.label }}</span>
+          {{ field }}
+          {% if field.help_text %}<span class="muted tiny">{{ field.help_text }}</span>{% endif %}
+          {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+        </label>
+      {% endif %}
+    {% endfor %}
+    <div class="field">
+      <span>Файлы</span>
+      {% include "partials/dropzone.html" %}
+    </div>
+    <div class="btn-row">
+      <button type="submit" name="submit_action" value="graded" class="btn btn-primary">Выдать выбранным</button>
+      {% if assignment_type == 'homework' or assignment_type == 'practice' %}
+        <button type="submit" name="submit_action" value="ungraded" class="btn btn-ghost">Без оценки</button>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="list-window list-window-fill">
+    <div class="list-window-head">
+      <h2>Ученики</h2>
+    </div>
+    <div class="list-window-body list-window-body-fill">
+      <label class="field field-search">
+        <input type="search" class="input" placeholder="Поиск ученика…" x-model="query" autocomplete="off">
+      </label>
+      {% if students %}
+        <ul class="bulk-student-list">
+          {% for student in students %}
+            <li
+              class="bulk-student-row"
+              data-filter-text="{{ student.profile.get_display_name }} {{ student.username }}"
+            >
+              <label class="bulk-check">
+                <input type="checkbox" name="students" value="{{ student.id }}">
+                <span class="avatar avatar-sm">{{ student.profile.get_display_name|slice:":1"|upper }}</span>
+                <span>
+                  <strong>{{ student.profile.get_display_name }}</strong>
+                  <span class="muted tiny">@{{ student.username }}</span>
+                </span>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Нет учеников.</p>
+      {% endif %}
+    </div>
+  </section>
+</form>
+{% endblock %}

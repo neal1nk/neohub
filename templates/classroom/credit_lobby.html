@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Зачёт — {{ assignment.title }} — NeoHub{% endblock %}
+{% block body_class %}exam-mode{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Зачёт</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="muted">Перед началом ознакомьтесь с условиями. Материалы откроются после старта.</p>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:student_assignments' %}?type=credit">Назад</a>
+</section>
+
+<section class="credit-lobby reveal delay">
+  <div class="form-panel">
+    <h2>Описание</h2>
+    {% if assignment.description %}
+      <p>{{ assignment.description|linebreaksbr }}</p>
+    {% else %}
+      <p class="muted">Описание не указано.</p>
+    {% endif %}
+
+    <div class="credit-time-card">
+      <span class="eyebrow">Время на выполнение</span>
+      <strong class="credit-time-value">{{ assignment.duration_minutes }} мин</strong>
+    </div>
+
+    {% if assignment.deadline %}
+      <p class="muted">
+        Дедлайн: {{ assignment.deadline|date:"d.m.Y H:i" }}
+        {% if assignment.should_show_deadline_countdown %}
+          · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+        {% endif %}
+      </p>
+    {% endif %}
+
+    <p class="muted tiny">
+      После старта платформа будет заблокирована до конца зачёта.
+      Файлы и инструкция появятся после подтверждения.
+    </p>
+
+    <form
+      method="post"
+      action="{% url 'classroom:credit_start' assignment.id %}"
+      data-confirm
+      data-confirm-title="Начать зачёт?"
+      data-confirm-message="Таймер запустится сразу. Выйти из режима зачёта до сдачи будет нельзя. Начать?"
+      data-confirm-action="Начать"
+    >
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Начать выполнение работы</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

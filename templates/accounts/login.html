@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Вход — NeoHub{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}auth-main{% endblock %}
+
+{% block content %}
+<div class="auth-scene" aria-hidden="true" data-auth-scene>
+  <div class="auth-scene-glow" data-auth-glow></div>
+  <span class="auth-float auth-float-a" data-auth-float data-depth="0.08"></span>
+  <span class="auth-float auth-float-b" data-auth-float data-depth="0.14"></span>
+  <span class="auth-float auth-float-c" data-auth-float data-depth="0.2"></span>
+  <span class="auth-float auth-float-d" data-auth-float data-depth="0.11"></span>
+  <span class="auth-float auth-float-e" data-auth-float data-depth="0.17"></span>
+  <span class="auth-float auth-float-f" data-auth-float data-depth="0.09"></span>
+  <span class="auth-ring auth-ring-1" data-auth-float data-depth="0.06"></span>
+  <span class="auth-ring auth-ring-2" data-auth-float data-depth="0.12"></span>
+</div>
+
+<section class="auth-hero">
+  <div class="auth-brand reveal">
+    <div class="brand brand-hero">
+      <span class="brand-mark">N</span>
+      <span class="brand-name">NeoHub</span>
+    </div>
+    <p class="auth-tagline">Платформа для занятий между преподавателем и учеником</p>
+  </div>
+
+  <form
+    method="post"
+    class="auth-card reveal delay"
+    hx-boost="false"
+    @submit="
+      if (authSubmitting) return;
+      $event.preventDefault();
+      authSubmitting = true;
+      authLoading = true;
+      authLoadingText = 'Вход в аккаунт…';
+      setTimeout(() => $el.submit(), 850);
+    "
+  >
+    {% csrf_token %}
+    <h1>Вход</h1>
+    <p class="muted">Используйте логин и пароль, выданные преподавателем</p>
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <label class="field">
+      <span>{{ form.username.label }}</span>
+      {{ form.username }}
+      {{ form.username.errors }}
+    </label>
+    <label class="field">
+      <span>{{ form.password.label }}</span>
+      {{ form.password }}
+      {{ form.password.errors }}
+    </label>
+    <button type="submit" class="btn btn-primary btn-block">Войти</button>
+    <p class="auth-access-link">
+      <a href="{% url 'accounts:access_activate' %}">Получить доступ</a>
+    </p>
+  </form>
+</section>
+{% endblock %}

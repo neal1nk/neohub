@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать задание — NeoHub{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">{{ assignment.get_assignment_type_display }} · {{ student.profile.get_display_name }}</p>
+    <h1>Редактировать задание</h1>
+  </div>
+  <a class="btn btn-ghost" href="{% url 'classroom:student_detail' student.id %}?tab={{ assignment.assignment_type }}">Назад</a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="form-panel reveal delay">
+  {% csrf_token %}
+  {% if assignment.assignment_type == 'credit' %}
+    <p class="muted tiny">
+      Описание видно до старта зачёта, инструкция — после начала.
+    </p>
+  {% endif %}
+  {% for field in form %}
+    {% if field.name == 'is_closed' %}
+      <label class="lock-switch lock-switch-form">
+        {{ field }}
+        <span class="lock-slider"><span class="lock-knob" aria-hidden="true">🔒</span></span>
+        <span class="lock-label">{{ field.label }}</span>
+      </label>
+    {% else %}
+      <label class="field">
+        <span>{{ field.label }}</span>
+        {{ field }}
+        {% if field.help_text %}<span class="muted tiny">{{ field.help_text }}</span>{% endif %}
+        {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+      </label>
+    {% endif %}
+  {% endfor %}
+
+  {% with files=assignment.files.all %}
+    {% if files %}
+      <div class="field">
+        <span>Текущие файлы</span>
+        <ul class="file-links file-links-editable">
+          {% for f in files %}
+            <li>
+              <a href="{% url 'classroom:download_assignment_file' f.id %}" target="_blank" rel="noopener">{{ f.original_name|default:f.file.name }}</a>
+              <label class="file-remove-check tiny muted">
+                <input type="checkbox" name="remove_files" value="{{ f.id }}">
+                удалить
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="field">
+    <span>Добавить файлы</span>
+    {% include "partials/dropzone.html" %}
+  </div>
+  <div class="btn-row">
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a class="btn btn-ghost" href="{% url 'classroom:student_detail' student.id %}?tab={{ assignment.assignment_type }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

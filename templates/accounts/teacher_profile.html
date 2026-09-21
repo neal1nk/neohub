@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль — NeoHub{% endblock %}
+{% block nav_teacher_profile %}is-active{% endblock %}
+{% block active_nav %}teacher-profile{% endblock %}
+
+{% block content %}
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Преподаватель</p>
+    <h1>Профиль</h1>
+    <p class="muted">Логин, пароль и контакты для связи с учениками.</p>
+  </div>
+</section>
+
+<section class="profile-tab reveal delay">
+  <div class="profile-hero">
+    <span class="avatar avatar-lg">{{ user_profile.get_display_name|slice:":1"|upper }}</span>
+    <div class="profile-hero-text">
+      <p class="eyebrow">Ваш аккаунт</p>
+      <h2>{{ user_profile.get_display_name }}</h2>
+      <p class="muted">@{{ user.username }}{% if user.email %} · {{ user.email }}{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="post" class="profile-edit-form" hx-boost="false">
+    {% csrf_token %}
+    <div class="profile-grid">
+      <div class="profile-card">
+        <div class="profile-card-head">
+          <h3>Аккаунт</h3>
+          <p class="muted tiny">ФИО, логин и пароль</p>
+        </div>
+        <div class="profile-card-body">
+          {% for field in form %}
+            {% if field.name == 'display_name' or field.name == 'username' or field.name == 'password' or field.name == 'password_confirm' %}
+              <label class="field">
+                <span>{{ field.label }}</span>
+                {{ field }}
+                {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-card-head">
+          <h3>Контакты</h3>
+          <p class="muted tiny">Для связи с учениками</p>
+        </div>
+        <div class="profile-card-body">
+          {% for field in form %}
+            {% if field.name == 'email' or field.name == 'telegram' or field.name == 'whatsapp' or field.name == 'max_messenger' %}
+              <label class="field">
+                <span>{{ field.label }}</span>
+                {{ field }}
+                {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="profile-actions">
+      <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

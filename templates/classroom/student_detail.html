@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.profile.get_display_name }} — NeoHub{% endblock %}
+{% block nav_teacher_students %}is-active{% endblock %}
+{% block active_nav %}teacher-students{% endblock %}
+
+{% block sidebar_extra %}
+  <p class="sidebar-label">Ученик</p>
+  <div class="sidebar-student">
+    <span class="avatar avatar-sm">{{ student.profile.get_display_name|slice:":1"|upper }}</span>
+    <div>
+      <strong>{{ student.profile.get_display_name }}</strong>
+      <span class="muted tiny">@{{ student.username }}</span>
+    </div>
+  </div>
+  <p class="sidebar-label">Разделы</p>
+  <a class="sidebar-link soft-nav {% if tab == 'overview' %}is-active{% endif %}"
+     href="?tab=overview"
+     hx-get="?tab=overview"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Обзор / рейтинг</a>
+  <a class="sidebar-link soft-nav {% if tab == 'theory' %}is-active{% endif %}"
+     href="?tab=theory"
+     hx-get="?tab=theory"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Теория</a>
+  <a class="sidebar-link soft-nav {% if tab == 'homework' %}is-active{% endif %}"
+     href="?tab=homework"
+     hx-get="?tab=homework"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Домашки</a>
+  <a class="sidebar-link soft-nav {% if tab == 'practice' %}is-active{% endif %}"
+     href="?tab=practice"
+     hx-get="?tab=practice"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Практика</a>
+  <a class="sidebar-link soft-nav {% if tab == 'credit' %}is-active{% endif %}"
+     href="?tab=credit"
+     hx-get="?tab=credit"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Зачёты</a>
+  <a class="sidebar-link soft-nav {% if tab == 'profile' %}is-active{% endif %}"
+     href="?tab=profile"
+     hx-get="?tab=profile"
+     hx-target="#page-content"
+     hx-select="#page-content"
+     hx-select-oob="#sidebar-extra"
+     hx-swap="outerHTML"
+     hx-push-url="true">Личные данные</a>
+{% endblock %}
+
+{% block content %}
+<div
+  class="soft-forms"
+  hx-boost="true"
+  hx-target="#page-content"
+  hx-select="#page-content"
+  hx-select-oob="#sidebar-extra"
+  hx-swap="outerHTML"
+  hx-push-url="true"
+>
+<section class="page-head reveal">
+  <div>
+    <p class="eyebrow">Карточка ученика</p>
+    <h1>{{ student.profile.get_display_name }}</h1>
+    <p class="muted">
+      {% if tab == 'overview' %}Рейтинг и ближайшие задания
+      {% elif tab == 'theory' %}Теоретические материалы
+      {% elif tab == 'homework' %}Домашние задания
+      {% elif tab == 'practice' %}Практические задания
+      {% elif tab == 'credit' %}Зачёты
+      {% else %}Личные данные{% endif %}
+    </p>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-ghost" href="{% url 'classroom:teacher_dashboard' %}">Все ученики</a>
+    <form
+      method="post"
+      action="{% url 'classroom:student_delete' student.id %}"
+      data-confirm
+      data-confirm-slider
+      data-confirm-title="Удалить ученика"
+      data-confirm-message="Введите логин ученика и проведите ползунок. Ученик, задания и все загруженные файлы будут удалены безвозвратно."
+      data-confirm-login="{{ student.username|escape }}"
+      data-confirm-action="Удалить"
+    >
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger-ghost">Удалить ученика</button>
+    </form>
+  </div>
+</section>
+
+{% if tab == 'overview' %}
+<section class="split-layout reveal delay">
+  <div class="list-panel">
+    <h2>Рейтинг</h2>
+    <div class="rating-block">
+      <div class="rating-value" style="color: {{ rating_color }}">
+        {% if rating is not None %}{{ rating }}{% else %}—{% endif %}<span class="muted">/100</span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill" style="width: {% if rating is not None %}{{ rating }}{% else %}0{% endif %}%; background: {{ rating_color }}"></div>
+      </div>
+      <p class="muted tiny">{{ rating_breakdown_text }}</p>
+    </div>
+  </div>
+  <div class="list-window list-window-fill">
+    <div class="list-window-head">
+      <h2>Ближайшие задания</h2>
+    </div>
+    <div class="list-window-body list-window-body-fill">
+    {% if upcoming %}
+      <ul class="item-list">
+        {% for assignment in upcoming %}
+          <li class="item-card compact {% if assignment.compute_status == 'open' or assignment.compute_status == 'overdue' %}is-pending{% endif %}">
+            <div class="item-head">
+              <strong>{{ assignment.title }}</strong>
+              <span class="status status-{{ assignment.compute_status }}">{{ assignment.status_label }}</span>
+            </div>
+            <p class="muted">
+              {{ assignment.get_assignment_type_display }}
+              {% if assignment.is_submitted and assignment.submission.submitted_at %}
+                · сдано {{ assignment.submission.submitted_at|date:"d.m.Y H:i" }}
+                {% if assignment.deadline %} · дедлайн {{ assignment.deadline|date:"d.m.Y H:i" }}{% endif %}
+              {% elif assignment.deadline %}
+                · до {{ assignment.deadline|date:"d.m.Y H:i" }}
+                {% if assignment.should_show_deadline_countdown %}
+                  · {% include "partials/deadline_remaining.html" with ends_at=assignment.deadline %}
+                {% endif %}
+              {% endif %}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Нет открытых заданий.</p>
+    {% endif %}
+    </div>
+  </div>
+</section>
+
+{% elif tab == 'theory' %}
+<section class="split-layout reveal delay">
+  <form method="post" enctype="multipart/form-data" action="{% url 'classroom:material_create' student.id %}" class="form-panel">
+    {% csrf_token %}
+    <h2>Добавить материал</h2>
+    {% for field in material_form %}
+      <label class="field">
+        <span>{{ field.label }}</span>
+        {{ field }}
+      </label>
+    {% endfor %}
+    <div class="field">
+      <span>Файлы</span>
+      {% include "partials/dropzone.html" %}
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+  </form>
+
+  <div class="list-window list-window-fill" x-data="listFilter()">
+    <div class="list-window-head">
+      <h2>Материалы {% if materials %}· {{ materials|length }}{% endif %}</h2>
+    </div>
+    <div class="list-window-body list-window-body-fill">
+      {% if materials %}
+        <label class="field field-search">
+          <input type="search" class="input" placeholder="Поиск по теории…" x-model="query" autocomplete="off">
+        </label>
+        <ul class="item-list">
+          {% for material in materials %}
+            {% include "classroom/_material_item.html" %}
+          {% endfor %}
+        </ul>
+        <p class="muted tiny" x-show="query && !hasVisible()" x-cloak>Ничего не найдено.</p>
+      {% else %}
+        <p class="muted">Пока нет теоретических материалов.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% elif tab == 'profile' %}
+<section class="profile-tab reveal delay">
+  <div class="profile-hero">
+    <span class="avatar avatar-lg">{{ student.profile.get_display_name|slice:":1"|upper }}</span>
+    <div class="profile-hero-text">
+      <p class="eyebrow">Профиль ученика</p>
+      <h2>{{ student.profile.get_display_name }}</h2>
+      <p class="muted">@{{ student.username }}{% if student.email %} · {{ student.email }}{% endif %}</p>
+    </div>
+    {% if rating is not None %}
+    <div class="profile-hero-rating" style="color: {{ rating_color }}">
+      <span class="tiny muted">Рейтинг</span>
+      <strong>{{ rating }}</strong>
+    </div>
+    {% endif %}
+  </div>
+
+  <form method="post" action="?tab=profile" class="profile-edit-form">
+    {% csrf_token %}
+    <div class="profile-grid">
+      <div class="profile-card">
+        <div class="profile-card-head">
+          <h3>Аккаунт</h3>
+          <p class="muted tiny">ФИО, логин и пароль для входа</p>
+        </div>
+        <div class="profile-card-body">
+          {% for field in personal_form %}
+            {% if field.name == 'display_name' or field.name == 'username' or field.name == 'password' or field.name == 'password_confirm' %}
+              <label class="field">
+                <span>{{ field.label }}</span>
+                {{ field }}
+                {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-card-head">
+          <h3>Контакты</h3>
+          <p class="muted tiny">Как связаться с учеником</p>
+        </div>
+        <div class="profile-card-body">
+          {% for field in personal_form %}
+            {% if field.name == 'email' or field.name == 'telegram' or field.name == 'whatsapp' or field.name == 'max_messenger' %}
+              <label class="field">
+                <span>{{ field.label }}</span>
+                {{ field }}
+                {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+              </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="profile-actions">
+      <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+    </div>
+  </form>
+</section>
+
+{% else %}
+  {% if tab == 'homework' %}
+    {% include "classroom/_assignment_tab.html" with type="homework" title="Домашнее задание" items=homework_list %}
+  {% elif tab == 'practice' %}
+    {% include "classroom/_assignment_tab.html" with type="practice" title="Практическое задание" items=practice_list %}
+  {% else %}
+    {% include "classroom/_assignment_tab.html" with type="credit" title="Зачёт" items=credit_list %}
+  {% endif %}
+{% endif %}
+</div>
+{% endblock %}

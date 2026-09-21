@@ -1,0 +1,61 @@
+<section class="split-layout reveal delay">
+  <form method="post" enctype="multipart/form-data" action="{% url 'classroom:assignment_create' student.id type %}" class="form-panel">
+    {% csrf_token %}
+    <h2>Новое: {{ title }}</h2>
+    {% if type == 'credit' %}
+      <p class="muted tiny">
+        Зачёт: название, описание (до старта), инструкция (после старта), время на выполнение.
+        Дедлайн, автооткрытие и файлы — по желанию.
+      </p>
+    {% endif %}
+    {% for field in assignment_form %}
+      {% if field.name == 'is_closed' %}
+        <label class="lock-switch lock-switch-form">
+          {{ field }}
+          <span class="lock-slider"><span class="lock-knob" aria-hidden="true">🔒</span></span>
+          <span class="lock-label">{{ field.label }}</span>
+        </label>
+      {% else %}
+        <label class="field">
+          <span>{{ field.label }}</span>
+          {{ field }}
+          {% if field.help_text %}<span class="muted tiny">{{ field.help_text }}</span>{% endif %}
+          {% if field.errors %}<span class="field-error">{{ field.errors|striptags }}</span>{% endif %}
+        </label>
+      {% endif %}
+    {% endfor %}
+    <div class="field">
+      <span>Файлы</span>
+      {% include "partials/dropzone.html" %}
+    </div>
+    <div class="btn-row">
+      <button type="submit" name="submit_action" value="graded" class="btn btn-primary">
+        {% if type == 'credit' %}Выдать зачёт{% else %}Выдать задание{% endif %}
+      </button>
+      {% if type == 'homework' or type == 'practice' %}
+        <button type="submit" name="submit_action" value="ungraded" class="btn btn-ghost">Без оценки</button>
+      {% endif %}
+    </div>
+  </form>
+
+  <div class="list-window list-window-fill" x-data="listFilter()">
+    <div class="list-window-head">
+      <h2>Список {% if items %}· {{ items|length }}{% endif %}</h2>
+    </div>
+    <div class="list-window-body list-window-body-fill">
+      {% if items %}
+        <label class="field field-search">
+          <input type="search" class="input" placeholder="Поиск задания…" x-model="query" autocomplete="off">
+        </label>
+        <ul class="item-list">
+          {% for assignment in items %}
+            {% include "classroom/_assignment_item_teacher.html" %}
+          {% endfor %}
+        </ul>
+        <p class="muted tiny" x-show="query && !hasVisible()" x-cloak>Ничего не найдено.</p>
+      {% else %}
+        <p class="muted">Заданий этого типа пока нет.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
