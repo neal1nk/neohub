@@ -47,26 +47,14 @@
 
 ## Деплой на Render
 
-1. Создайте репозиторий и запушьте проект.
-2. На [Render](https://render.com) используйте `render.yaml` (Blueprint) или создайте Web Service + PostgreSQL вручную.
-3. Env-переменные:
-   - `DJANGO_SECRET_KEY` — длинная случайная строка
-   - `DJANGO_DEBUG=False`
-   - `DJANGO_ALLOWED_HOSTS=your-app.onrender.com`
-   - `CSRF_TRUSTED_ORIGINS=https://your-app.onrender.com`
-   - `DATABASE_URL` — из Render Postgres
-4. Build:
+Подробная актуальная инструкция: см. [DEPLOY.md](DEPLOY.md).
 
-```bash
-pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-```
+Кратко:
 
-5. Start: `gunicorn ghub.wsgi:application`
-6. После деплоя один раз выполните в Shell Render:
-
-```bash
-python manage.py bootstrap_teacher --username teacher --password 'СменитеПароль'
-```
+1. Запушьте репозиторий на GitHub.
+2. На [Render](https://render.com) → **New → Blueprint** → выберите репозиторий (`render.yaml`).
+3. Задайте `DJANGO_ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` под ваш URL `*.onrender.com`.
+4. В Shell: `python manage.py bootstrap_teacher ...` и `python manage.py create_activation_code`.
 
 ## Railway (альтернатива)
 
