@@ -5,7 +5,17 @@ services:
     name: ghub
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
+    buildCommand: >-
+      pip install -r requirements.txt
+      && python manage.py collectstatic --noinput
+      && python manage.py migrate --noinput
+      && if [ -n "$BOOTSTRAP_TEACHER_PASSWORD" ]; then
+      python manage.py bootstrap_teacher
+      --username "${BOOTSTRAP_TEACHER_USERNAME:-teacher}"
+      --password "$BOOTSTRAP_TEACHER_PASSWORD"
+      --name "${BOOTSTRAP_TEACHER_NAME:-Кирилл}";
+      python manage.py create_activation_code;
+      fi
     startCommand: gunicorn ghub.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
@@ -21,4 +31,10 @@ services:
       - key: SECURE_SSL_REDIRECT
         value: "True"
       - key: DATABASE_URL
+        sync: false
+      - key: BOOTSTRAP_TEACHER_USERNAME
+        sync: false
+      - key: BOOTSTRAP_TEACHER_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_TEACHER_NAME
         sync: false

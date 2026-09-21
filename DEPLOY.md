@@ -48,14 +48,19 @@ gh repo create neohub --private --source=. --remote=origin --push
 
 > Если free Postgres недоступен — Starter на Render или Neon (https://neon.tech) и вставь `DATABASE_URL`.
 
-## 3. Первый вход (Render Shell)
+## 3. Первый вход (без Shell)
 
-**Shell** у Web Service:
+На free-плане **Shell недоступен**. Один раз задай в Environment:
 
-```bash
-python manage.py bootstrap_teacher --username teacher --password 'СмениПарольСразу' --name "Кирилл"
-python manage.py create_activation_code
-```
+| Key | Value |
+|-----|--------|
+| `BOOTSTRAP_TEACHER_USERNAME` | `teacher` |
+| `BOOTSTRAP_TEACHER_PASSWORD` | свой пароль |
+| `BOOTSTRAP_TEACHER_NAME` | `Кирилл` |
+
+Сохрани → дождись redeploy → в **Build Logs** найди строки «Преподаватель создан» и «Код создан».
+
+Потом **удали** `BOOTSTRAP_TEACHER_PASSWORD` из Environment (иначе пароль будет сбрасываться на каждый билд).
 
 Открой сайт → логин преподавателя → проверь кабинет и загрузку файла.
 
