@@ -20,6 +20,7 @@ class Command(BaseCommand):
         user, created = User.objects.get_or_create(username=username)
         user.set_password(password)
         user.is_staff = True
+        user.is_superuser = True
         user.save()
 
         profile, _ = Profile.objects.get_or_create(user=user)
